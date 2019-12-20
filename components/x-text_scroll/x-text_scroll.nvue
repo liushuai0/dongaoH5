@@ -1,0 +1,118 @@
+<template>
+	<view class="container">
+		<view class="notice-text-box">
+			<text class="notice-text" ref="my" id="id" :style="{fontSize:fontSize+'upx'}">{{text}}</text>
+		</view>
+	</view>
+</template>
+<script>
+	import Binding from 'weex-bindingx';
+	module.exports = {
+		props: {
+			text: {
+				type: String,
+				default: ''
+			},
+			fontSize: {
+				type: String,
+				default: '24'
+			},
+			duration: {
+				type: String,
+				default: '20000'
+			}
+		},
+		data () {
+			return {
+				x: 0,
+				gesToken: 0,
+				textWidth: 0
+			}
+		},
+		created: function () {
+			setTimeout(()=>{
+				var self = this
+				// #ifdef H5
+				uni.getSystemInfo({
+				    success: function (res) {
+					   const query = uni.createSelectorQuery().in(this);
+					   query.select('#id').boundingClientRect(data => {
+							self.textWidth = data.width / res.windowWidth * 750 + 750
+					   }).exec();
+					   self.bindTiming()
+				    }
+				});
+				// #endif
+				// #ifdef APP-PLUS
+				uni.getSystemInfo({
+				    success: function (res) {
+						self.textWidth = self.text.length * parseInt(self.fontSize) / 2 + res.windowWidth;
+						self.bindTiming()
+				    }
+				});
+				// #endif
+			},500)
+		},
+		methods: {
+			getEl: function(el) {
+				if (typeof el === 'string' || typeof el === 'number') return el;
+				// #ifdef APP-PLUS
+				if (WXEnvironment) {
+					return el.ref;
+				} else {
+					return el instanceof HTMLElement ? el : el.$el;
+				}
+				// #endif
+				// #ifdef H5
+				return el instanceof HTMLElement ? el : el.$el;
+				// #endif
+			},
+			bindTiming: function() {
+				this.isInAnimation = true;
+				var my = this.getEl(this.$refs.my);
+				var self = this;
+				var textWidth = -this.textWidth;
+				var translate_x_origin = 'linear(t,0,'+textWidth+','+self.duration+')';
+				var result = Binding.bind({
+					eventType: 'timing',
+					exitExpression: 't>'+self.duration,
+					props: [{
+							element: my,
+							property: 'transform.translateX',
+							expression: translate_x_origin
+						}
+					]
+				}, function(e) {
+					if (e.state === 'end' || e.state === 'exit') {
+						self.bindTiming()
+					}
+				});
+				self.gesToken = result.token;
+			}
+		}
+	}
+</script>
+<style>
+	.container {
+		flex: 1;
+	}
+
+	.notice-text-box{
+		width: 750upx;
+		height: 48upx;
+		background-color: rgba(0,0,0,.5);
+		position: relative;
+	}
+
+	.notice-text {
+		color: #ffffff;
+		font-size: 24upx;
+		line-height: 48upx;
+		/* #ifndef APP-PLUS */
+		white-space: pre;
+		/* #endif */
+		position: absolute;
+		left: 750upx;
+		top: 0;
+	}
+</style>
